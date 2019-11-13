@@ -1,4 +1,4 @@
-syntax = "proto2";
+syntax = "proto3";
 
 package ZilliqaMessage;
 
@@ -8,37 +8,37 @@ package ZilliqaMessage;
 
 message ByteArray
 {
-    required bytes data = 1;
+    bytes data = 1;
 }
 
 message ProtoTransactionCoreInfo
 {
-    optional uint32 version         = 1;
-    optional uint64 nonce           = 2;
-    optional bytes toaddr           = 3;
-    optional ByteArray senderpubkey = 4;
-    optional ByteArray amount       = 5;
-    optional ByteArray gasprice     = 6;
-    optional uint64 gaslimit        = 7;
-    optional bytes code             = 8;
-    optional bytes data             = 9;
+    uint32 version         = 1;
+    oneof oneof2 { uint64 nonce = 2; }
+    bytes toaddr           = 3;
+    ByteArray senderpubkey = 4;
+    ByteArray amount       = 5;
+    ByteArray gasprice     = 6;
+    uint64 gaslimit        = 7;
+    oneof oneof8 { bytes code = 8; }
+    oneof oneof9 { bytes data = 9; }
 }
 
 message ProtoTransaction
 {
-    optional bytes tranid                  = 1;
-    optional ProtoTransactionCoreInfo info = 2;
-    optional ByteArray signature           = 3;
+    bytes tranid                  = 1;
+    ProtoTransactionCoreInfo info = 2;
+    ByteArray signature           = 3;
 }
 
 message ProtoTransactionReceipt
 {
-    optional bytes receipt    = 1;
-    optional uint64 cumgas = 2;
+    bytes receipt    = 1;
+    uint64 cumgas = 2;
 }
 
 message ProtoTransactionWithReceipt
 {
-    optional ProtoTransaction transaction    = 1;
-    optional ProtoTransactionReceipt receipt = 2;
+    ProtoTransaction transaction    = 1;
+    ProtoTransactionReceipt receipt = 2;
 }
