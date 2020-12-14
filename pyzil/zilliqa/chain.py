@@ -65,7 +65,9 @@ class BlockChain:
 
         txn_proto = pb2.ProtoTransactionCoreInfo()
         txn_proto.version = self.version
-        txn_proto.nonce = int(nonce)
+        # txn_proto.nonce = int(nonce)
+        # Hack for benchmark: don't sign the nonce
+        txn_proto.nonce = int(0)
         txn_proto.toaddr = utils.hex_str_to_bytes(to_addr)
         txn_proto.senderpubkey.data = zil_key.keypair_bytes.public
         txn_proto.amount.data = utils.int_to_bytes(int(amount), n_bytes=16)
@@ -80,6 +82,7 @@ class BlockChain:
         signature = zil_key.sign_str(data_to_sign)
         # assert zil_key.verify(signature, data_to_sign)
 
+        txn_proto.nonce = int(nonce)
         params = {
             "version": txn_proto.version,
             "nonce": txn_proto.nonce,
