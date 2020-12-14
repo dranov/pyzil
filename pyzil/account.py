@@ -66,6 +66,9 @@ class Account:
 
         return self.zil_key == other.zil_key
 
+    def __hash__(self):
+        return hash(self.address)
+
     @property
     def address0x(self) -> str:
         return "0x" + self.address
@@ -145,8 +148,12 @@ class Account:
 
     def get_nonce(self) -> int:
         """Return account nonce."""
-        resp = self.get_balance_nonce()
-        return int(resp["nonce"])
+        try:
+            resp = self.get_balance_nonce()
+            return int(resp["nonce"])
+        # Operate without a blockchain
+        except:
+            return 0
 
     def get_contracts(self) -> List["Contract"]:
         from pyzil.contract import Contract
@@ -158,7 +165,7 @@ class Account:
                  nonce: Optional[int]=None,
                  gas_price: Optional[int]=None, gas_limit=1,
                  code="", data="", priority=False,
-                 confirm=False, timeout=300, sleep=20):
+                 confirm=False, timeout=300, sleep=20, hit_chain=False):
         """Transfer zils to another address."""
         if not self.zil_key or not self.zil_key.encoded_private_key:
             raise RuntimeError("can not create transaction without private key")
@@ -175,7 +182,10 @@ class Account:
             amount = zils.toQa()
 
         if gas_price is None:
-            gas_price = self.get_min_gas_price(refresh=False)
+            if hit_chain:
+                gas_price = self.get_min_gas_price(refresh=False)
+            else:
+                gas_price = 100
 
         if nonce is None:
             resp = self.get_balance_nonce()
@@ -191,20 +201,23 @@ class Account:
         )
         self.last_params = params
 
-        txn_info = active_chain.api.CreateTransaction(params)
-        self.last_txn_info = txn_info
-        if not confirm:
-            return txn_info
-
-        if not txn_info:
+        if not hit_chain:
             return None
+        else:
+            txn_info = active_chain.api.CreateTransaction(params)
+            self.last_txn_info = txn_info
+            if not confirm:
+                return txn_info
 
-        txn_details = Account.wait_txn_confirm(
-            txn_info["TranID"],
-            timeout=timeout, sleep=sleep
-        )
-        self.last_txn_details = txn_details
-        return txn_details
+            if not txn_info:
+                return None
+
+            txn_details = Account.wait_txn_confirm(
+                txn_info["TranID"],
+                timeout=timeout, sleep=sleep
+            )
+            self.last_txn_details = txn_details
+            return txn_details
 
     def transfer_batch(self, batch: List[BatchTransfer],
                        gas_price: Optional[int]=None, gas_limit=1,

@@ -14,11 +14,11 @@ Zilliqa Smart Contract
 
 import json
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Union, Optional
 
 from pyzil.crypto import zilkey
 from pyzil.zilliqa.chain import active_chain
-
+from pyzil.zilliqa.units import Qa, Zil
 
 class Contract:
     """Zilliqa Smart Contract"""
@@ -136,8 +136,7 @@ class Contract:
             raise ValueError("contract had deployed already")
 
         init_list = [
-            Contract.value_dict("_scilla_version", "Uint32", "0"),
-            Contract.value_dict("owner", "ByStr20", self.account.address0x),
+            Contract.value_dict("_scilla_version", "Uint32", "0")
         ]
         if init_params is not None:
             init_list += init_params
@@ -151,7 +150,8 @@ class Contract:
             gas_limit=gas_limit,
             code=self.code,
             data=self.init_str,
-            priority=priority
+            priority=priority,
+            hit_chain=True
         )
         if not confirm:
             return txn_info
@@ -159,13 +159,14 @@ class Contract:
         if not txn_info:
             raise ValueError("failed to create contract")
 
+        print(txn_info)
         address = txn_info["ContractAddress"]
         deploy_txn_id = txn_info["TranID"]
 
         txn_details = self.account.wait_txn_confirm(deploy_txn_id, timeout=timeout, sleep=sleep)
         if txn_details:
             self.last_receipt = txn_details["receipt"].copy()
-
+            print(txn_details["receipt"])
             if txn_details["receipt"]["success"]:
                 self.address = active_chain.api.GetContractAddressFromTransactionID(deploy_txn_id)
                 assert address == self.address, "address mismatch"
@@ -179,6 +180,7 @@ class Contract:
 
     def call(self, method: str,
              params: Optional[List[Dict]],
+             zils: Union[str, float, Zil, Qa]=0,
              nonce: Optional[int] = None,
              gas_price: Optional[int] = None, gas_limit=10000, priority=False,
              confirm=True, timeout=300, sleep=10) -> Optional[Dict]:
@@ -192,14 +194,22 @@ class Contract:
             "params": params
         })
 
+        if isinstance(zils, Qa):
+            amount = zils
+        else:
+            if not isinstance(zils, Zil):
+                zils = Zil(zils)
+            amount = zils.toQa()
+
         txn_info = self.account.transfer(
             to_addr=self.checksum_address,
-            zils=0,
+            zils=amount,
             nonce=nonce,
             gas_price=gas_price,
             gas_limit=gas_limit,
             data=call_data,
-            priority=priority
+            priority=priority,
+            hit_chain=False
         )
         if not confirm:
             return txn_info
